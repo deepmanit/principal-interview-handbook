@@ -2468,3 +2468,380 @@ A Principal Engineer understands that:
 Understanding CAP is not about memorizing definitions.
 
 It is about making informed engineering decisions under failure.
+
+---
+
+# Interview Preparation
+
+This section contains real interview questions asked at Google, Meta, Microsoft, Amazon, Uber, Apple, Atlassian, Walmart Global Tech, Salesforce, LinkedIn and other Tier-1 companies.
+
+Questions are grouped by expected engineering level.
+
+---
+
+# Senior Engineer Questions (L5 / SDE-III)
+
+## Q1
+
+Explain CAP Theorem.
+
+### Interviewer Wants
+
+- Correct definition
+- Network partition understanding
+- CP vs AP
+
+---
+
+## Q2
+
+What is a network partition?
+
+---
+
+## Q3
+
+Explain Consistency.
+
+---
+
+## Q4
+
+Explain Availability.
+
+---
+
+## Q5
+
+Can you give examples of CP systems?
+
+---
+
+## Q6
+
+Can you give examples of AP systems?
+
+---
+
+## Q7
+
+Why is Cassandra AP?
+
+---
+
+## Q8
+
+Why is ZooKeeper CP?
+
+---
+
+## Q9
+
+Does CAP apply to PostgreSQL?
+
+---
+
+## Q10
+
+What happens during a partition?
+
+---
+
+# Staff Engineer Questions (L6 / Staff)
+
+These questions evaluate architectural reasoning.
+
+---
+
+## Q1
+
+Design a banking system.
+
+Would you choose CP or AP?
+
+Why?
+
+Expected Discussion
+
+- Financial correctness
+- User experience
+- Failure handling
+- Trade-offs
+
+---
+
+## Q2
+
+Design Instagram Likes.
+
+Would you choose CP or AP?
+
+Explain.
+
+---
+
+## Q3
+
+Why doesn't Google simply build a CA distributed database?
+
+---
+
+## Q4
+
+Suppose Redis becomes unavailable.
+
+Should your application fail?
+
+---
+
+## Q5
+
+How would you explain CAP to a Product Manager?
+
+---
+
+## Q6
+
+Suppose two regions become isolated.
+
+Walk me through exactly what happens.
+
+---
+
+## Q7
+
+How would you classify DynamoDB?
+
+Can it be configured differently?
+
+---
+
+## Q8
+
+How does CAP influence architecture decisions?
+
+---
+
+## Q9
+
+Would you rather reject requests or serve stale data?
+
+Give three examples.
+
+---
+
+## Q10
+
+Can different services inside the same company choose different CAP trade-offs?
+
+Examples?
+
+---
+
+# Principal Engineer Questions (L7/L8)
+
+These questions test engineering judgment.
+
+---
+
+## Q1
+
+You're designing a global payment platform.
+
+Walk me through every CAP decision you would make.
+
+---
+
+## Q2
+
+Your CEO says:
+
+"I never want downtime."
+
+Your CFO says:
+
+"I don't want incorrect balances."
+
+Explain why both cannot always be achieved simultaneously.
+
+---
+
+## Q3
+
+A product manager asks:
+
+"Why can't engineering solve partitions?"
+
+How would you answer?
+
+---
+
+## Q4
+
+Can a distributed database dynamically switch between CP and AP?
+
+Under what conditions?
+
+---
+
+## Q5
+
+Suppose users complain about stale data.
+
+Would you redesign the architecture or change consistency levels?
+
+What factors influence your decision?
+
+---
+
+## Q6
+
+How does CAP affect:
+
+- Cache
+- Database
+- Kafka
+- Search
+- CDN
+
+---
+
+## Q7
+
+Why is CAP still relevant in Kubernetes?
+
+---
+
+## Q8
+
+Does CAP apply to Microservices?
+
+Explain carefully.
+
+---
+
+## Q9
+
+What architectural patterns reduce the business impact of CAP?
+
+Expected Discussion
+
+- Retry
+- Saga
+- Outbox
+- CQRS
+- Event Sourcing
+- Cache
+- Read Replicas
+
+---
+
+## Q10
+
+If you were reviewing another Principal Engineer's architecture, which CAP-related mistakes would you look for first?
+
+---
+
+# Whiteboard Exercise
+
+Design a globally distributed shopping cart.
+
+Requirements
+
+- Multi-region
+- Millions of users
+- Low latency
+- High availability
+
+Discuss
+
+- CP or AP?
+- Why?
+- Failure scenarios
+- Conflict resolution
+- Recovery
+
+---
+
+# Architecture Review Exercise
+
+Review the following statement.
+
+> We'll use Cassandra because it's more scalable than PostgreSQL.
+
+Questions
+
+- Is the reasoning sufficient?
+- What information is missing?
+- What workload assumptions should be validated?
+- What follow-up questions would you ask?
+
+---
+
+# Common Wrong Answers
+
+❌ CAP means choose any two.
+
+---
+
+❌ Cassandra is better than PostgreSQL.
+
+---
+
+❌ AP means incorrect data.
+
+---
+
+❌ MySQL is CA.
+
+---
+
+❌ Availability means zero downtime.
+
+---
+
+❌ Consistency means ACID.
+
+---
+
+# Principal Engineer Review Checklist
+
+Before leaving the interview verify that you explained:
+
+- Why CAP exists
+- What a partition actually is
+- Why partitions are unavoidable
+- Why "choose any two" is incorrect
+- CP behavior
+- AP behavior
+- Real production examples
+- Business trade-offs
+- Failure scenarios
+- Recovery strategies
+
+If all ten topics were covered, you've demonstrated Principal-level understanding.
+
+---
+
+# Practice Assignment
+
+Design the following systems and identify whether each should lean toward CP or AP.
+
+- Banking
+- Ticketmaster
+- WhatsApp
+- Google Docs
+- Uber
+- DNS
+- Netflix
+- Instagram
+- Stock Exchange
+- Shopping Cart
+
+For each system explain:
+
+1. Business requirement
+2. Failure scenario
+3. Chosen trade-off
+4. Why
+5. Draw the architecture

@@ -1,20 +1,116 @@
-# 🚀 System Design
+# 🏗️ System Design
 
-This section contains everything required for Principal / Staff Engineer System Design interviews at Google, Meta, Microsoft, Amazon, Uber, Apple, Atlassian, and other Tier-1 companies.
+Welcome to the **System Design** section of the Principal Engineer Interview Handbook.
+
+This section focuses on designing scalable, reliable, highly available, and maintainable distributed systems similar to those built at Google, Meta, Microsoft, Amazon, Uber, Apple, Netflix, Airbnb, and other Tier-1 companies.
 
 ---
 
-## 📚 Topics
+# 🎯 Objectives
 
-### High-Level Design (HLD)
+After completing this section, you should be able to:
+
+- Design large-scale distributed systems
+- Estimate system capacity
+- Choose appropriate databases
+- Design scalable APIs
+- Explain trade-offs
+- Handle billions of requests
+- Discuss failure scenarios
+- Explain consistency models
+- Answer Principal Engineer follow-up questions
+
+---
+
+# 📚 Learning Roadmap
+
+## Part 1 — Fundamentals
+
+- System Design Interview Process
+- Functional Requirements
+- Non-Functional Requirements
+- Capacity Estimation
+- API Design
+- Database Design
+- High-Level Design
+- Low-Level Design
+- Bottleneck Analysis
+
+---
+
+## Part 2 — Distributed Systems
+
+- CAP Theorem
+- PACELC
+- Consistent Hashing
+- Replication
+- Sharding
+- Leader Election
+- Consensus (Raft / Paxos)
+- Quorum
+- Gossip Protocol
+- Vector Clocks
+- CRDT
+- Saga Pattern
+- Two-Phase Commit
+
+---
+
+## Part 3 — Scalability
+
+- Horizontal Scaling
+- Vertical Scaling
+- Load Balancers
+- CDN
+- Cache
+- Rate Limiter
+- Circuit Breaker
+- Retry
+- Bulkhead
+- Backpressure
+
+---
+
+## Part 4 — Storage
+
+- MySQL
+- PostgreSQL
+- Cassandra
+- DynamoDB
+- Redis
+- Elasticsearch
+- ClickHouse
+- S3
+
+---
+
+## Part 5 — Messaging
+
+- Kafka
+- RabbitMQ
+- Pulsar
+- SQS
+- Event Sourcing
+- CQRS
+
+---
+
+## Part 6 — Cloud
+
+- Docker
+- Kubernetes
+- AWS
+- Terraform
+
+---
+
+# 📖 HLD Problems
 
 - URL Shortener
-- TinyURL
-- Pastebin
 - Instagram
 - WhatsApp
-- Facebook News Feed
 - Twitter / X
+- Facebook News Feed
 - YouTube
 - Netflix
 - Uber
@@ -24,128 +120,52 @@ This section contains everything required for Principal / Staff Engineer System 
 - BookMyShow
 - Ticketmaster
 - IRCTC
-- Google Drive
 - Dropbox
+- Google Drive
 - Google Docs
 - Zoom
 - Slack
 - Discord
-- Notification Service
 - API Gateway
 - Search Autocomplete
+- Notification Service
 - Logging System
 - Metrics System
 - Distributed Cache
-- CDN
-- Recommendation System
 
 ---
 
-## Distributed Systems
+# 💡 What Makes a Principal Engineer Answer Different?
 
-- CAP Theorem
-- PACELC
-- Consistent Hashing
-- Quorum
-- Replication
-- Leader Election
-- Consensus
-- ZooKeeper
-- Raft
-- Paxos
-- Gossip Protocol
-- Vector Clocks
-- CRDT
-- Saga Pattern
-- Two Phase Commit
+A Principal Engineer doesn't stop after drawing a high-level architecture.
 
----
+A strong answer also covers:
 
-## Messaging Systems
-
-- Kafka
-- RabbitMQ
-- ActiveMQ
-- Pulsar
-- SQS
-
----
-
-## Caching
-
-- Redis
-- Memcached
-- Cache Aside
-- Read Through
-- Write Through
-- Write Back
-- Cache Invalidation
-- Distributed Cache
-
----
-
-## Databases
-
-- MySQL
-- PostgreSQL
-- Cassandra
-- DynamoDB
-- MongoDB
-- Elasticsearch
-- ClickHouse
-
----
-
-## Scalability
-
-- Horizontal Scaling
-- Vertical Scaling
-- Load Balancing
-- Auto Scaling
-- Rate Limiting
-- Circuit Breaker
-- Retry
-- Bulkhead
-- Backpressure
-
----
-
-## Security
-
-- OAuth2
-- OIDC
-- JWT
-- SAML
-- mTLS
-- API Security
-- Zero Trust
-
----
-
-## Cloud
-
-- AWS
-- Kubernetes
-- Docker
-- Terraform
-- Helm
-
----
-
-## Goal
-
-Each topic contains:
-
-- Problem Statement
-- Functional Requirements
-- Non-functional Requirements
-- Capacity Estimation
-- APIs
-- Database Design
-- HLD Diagram
-- Component Deep Dive
-- Scaling Strategy
-- Bottlenecks
 - Trade-offs
-- Follow-up Questions
-- Production Considerations
+- Scalability limits
+- Failure handling
+- Data consistency
+- Monitoring and observability
+- Security considerations
+- Operational concerns
+- Cost optimization
+- Evolution of the design over time
+
+---
+
+# 📂 Folder Structure
+
+```text
+01-System-Design/
+│
+├── README.md
+├── Fundamentals/
+├── HLD/
+├── LLD/
+├── Distributed-Systems/
+├── Databases/
+├── Messaging/
+├── Scalability/
+├── Cloud/
+└── Security/
+```

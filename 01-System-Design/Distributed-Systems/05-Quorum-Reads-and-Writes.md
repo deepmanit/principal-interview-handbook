@@ -1204,3 +1204,620 @@ The formula guarantees that every successful read quorum intersects every succes
 - `R + W > N` guarantees quorum intersection.
 - Quorum intersection increases the probability of observing the latest committed write.
 - Quorum alone is not sufficient for linearizability.
+
+---
+
+# Quorum in Real Distributed Databases
+
+Every distributed database implements quorum differently.
+
+Some expose quorum directly.
+
+Others hide it behind higher-level APIs.
+
+The underlying idea remains the same.
+
+> Ensure that enough replicas participate in an operation so that data remains available and sufficiently consistent.
+
+---
+
+# Apache Cassandra
+
+Cassandra gives developers explicit control over consistency.
+
+Instead of selecting one consistency level for the entire cluster,
+
+every read and write request can specify its own consistency level.
+
+---
+
+# Replication Example
+
+Suppose
+
+```
+Replication Factor (N) = 3
+```
+
+Three replicas store the same partition.
+
+```mermaid
+flowchart LR
+
+Coordinator
+
+Coordinator --> A[(Replica A)]
+
+Coordinator --> B[(Replica B)]
+
+Coordinator --> C[(Replica C)]
+```
+
+---
+
+# Consistency Level: ONE
+
+```
+Write
+
+↓
+
+One Replica ACK
+
+↓
+
+Success
+```
+
+Advantages
+
+- Lowest latency
+- Highest availability
+
+Trade-offs
+
+- Higher probability of stale reads
+- Greater risk of data loss before replication completes
+
+---
+
+## Typical Workloads
+
+- Logging
+- Metrics
+- Analytics
+- User Activity Streams
+
+---
+
+# Consistency Level: TWO
+
+```
+Need
+
+2 ACKs
+```
+
+Balanced approach.
+
+Better durability than ONE.
+
+Still relatively low latency.
+
+---
+
+# Consistency Level: THREE
+
+```
+Need
+
+3 ACKs
+```
+
+With
+
+```
+Replication Factor = 3
+```
+
+all replicas must acknowledge.
+
+Equivalent to
+
+ALL.
+
+---
+
+# Consistency Level: QUORUM
+
+Formula
+
+```
+floor(N / 2) + 1
+```
+
+Examples
+
+| Replication Factor | QUORUM |
+|-------------------|---------|
+| 3 | 2 |
+| 5 | 3 |
+| 7 | 4 |
+
+This is Cassandra's most commonly used consistency level.
+
+---
+
+# Why QUORUM?
+
+Suppose
+
+```
+N = 3
+```
+
+Write
+
+```
+QUORUM
+
+↓
+
+2 ACKs
+```
+
+Read
+
+```
+QUORUM
+
+↓
+
+2 Reads
+```
+
+```
+2 + 2 > 3
+```
+
+Read and write quorums intersect.
+
+Consistency improves.
+
+---
+
+# Consistency Level: ALL
+
+Every replica
+
+must acknowledge.
+
+```
+Replica A
+
+ACK
+
+Replica B
+
+ACK
+
+Replica C
+
+ACK
+
+↓
+
+Success
+```
+
+Advantages
+
+- Highest durability
+- Strongest consistency
+
+Trade-offs
+
+- Highest latency
+- Lowest availability
+
+If even one replica is unavailable,
+
+the operation fails.
+
+---
+
+# Consistency Level: ANY
+
+One of Cassandra's most misunderstood consistency levels.
+
+ANY does **not** require any replica to persist the write immediately.
+
+If all replicas are unavailable,
+
+the coordinator stores a **Hint**.
+
+Later,
+
+the hint is replayed to the replicas.
+
+Advantages
+
+- Maximum availability
+
+Trade-offs
+
+- Weakest durability guarantees
+
+---
+
+# LOCAL_QUORUM
+
+Imagine two regions.
+
+```text
+India
+
+Replica A
+
+Replica B
+
+Replica C
+
+-------------------
+
+Europe
+
+Replica D
+
+Replica E
+
+Replica F
+```
+
+Client located in India.
+
+LOCAL_QUORUM
+
+requires
+
+only the majority
+
+of replicas
+
+inside India.
+
+Advantages
+
+- Lower latency
+- Avoids cross-region round trips
+- Better regional performance
+
+Trade-offs
+
+Remote regions may observe updates slightly later.
+
+---
+
+# EACH_QUORUM
+
+Now suppose
+
+every region
+
+must acknowledge independently.
+
+```
+India
+
+↓
+
+Majority
+
+AND
+
+Europe
+
+↓
+
+Majority
+```
+
+This provides stronger cross-region guarantees.
+
+Trade-offs
+
+Higher latency.
+
+Lower availability.
+
+---
+
+# Cassandra Consistency Summary
+
+| Level | Required ACKs | Latency | Consistency |
+|--------|---------------|----------|-------------|
+| ANY | Hint or Replica | Lowest | Lowest |
+| ONE | 1 | Very Low | Low |
+| TWO | 2 | Low | Medium |
+| THREE | 3 | Medium | High |
+| QUORUM | Majority | Medium | High |
+| LOCAL_QUORUM | Regional Majority | Medium | High |
+| EACH_QUORUM | Majority per Region | High | Very High |
+| ALL | Every Replica | Highest | Highest |
+
+---
+
+# MongoDB
+
+MongoDB exposes quorum using
+
+**Write Concern**.
+
+---
+
+## w:1
+
+Primary acknowledges immediately.
+
+Fast.
+
+Lower durability.
+
+---
+
+## w:majority
+
+The primary waits until
+
+a majority
+
+of voting replicas
+
+acknowledge.
+
+This greatly reduces
+
+the chance of losing acknowledged writes during failover.
+
+---
+
+## Example
+
+Five-node Replica Set
+
+```
+Primary
+
+Secondary A
+
+Secondary B
+
+Secondary C
+
+Secondary D
+```
+
+```
+Majority
+
+=
+
+3
+```
+
+Client receives success
+
+after
+
+three nodes
+
+acknowledge.
+
+---
+
+# Read Concern
+
+MongoDB also lets applications choose
+
+read guarantees.
+
+Examples
+
+- local
+- majority
+- linearizable
+
+Applications can balance
+
+latency
+
+and
+
+consistency
+
+per request.
+
+---
+
+# Amazon DynamoDB
+
+DynamoDB does not expose
+
+quorum terminology directly.
+
+Instead,
+
+applications choose
+
+between
+
+Eventually Consistent Reads
+
+and
+
+Strongly Consistent Reads.
+
+Internally,
+
+quorum-style replication is used,
+
+but AWS intentionally hides those implementation details.
+
+---
+
+# Kafka
+
+Kafka uses a concept
+
+very similar to quorum.
+
+Instead of
+
+Read Quorum
+
+and
+
+Write Quorum,
+
+Kafka uses
+
+**In-Sync Replicas (ISR).**
+
+---
+
+## Producer ACK Settings
+
+### acks=0
+
+Producer does not wait.
+
+Lowest latency.
+
+Highest risk.
+
+---
+
+### acks=1
+
+Leader acknowledges.
+
+Followers replicate later.
+
+Balanced performance.
+
+---
+
+### acks=all
+
+Leader waits until
+
+every replica
+
+inside the ISR
+
+acknowledges.
+
+This is conceptually similar
+
+to a quorum write,
+
+although Kafka defines durability in terms of the ISR rather than a fixed replication factor.
+
+---
+
+# Comparing Databases
+
+| Database | Consistency Control |
+|-----------|--------------------|
+| Cassandra | ONE, QUORUM, ALL, LOCAL_QUORUM |
+| MongoDB | Write Concern, Read Concern |
+| DynamoDB | Strong vs Eventual Reads |
+| Kafka | Producer ACKs + ISR |
+| CockroachDB | Raft Majority |
+| Spanner | Paxos Majority |
+
+Although the APIs differ,
+
+the engineering principles remain remarkably similar.
+
+---
+
+# Choosing the Right Consistency Level
+
+| Workload | Suggested Level |
+|-----------|-----------------|
+| Banking | QUORUM / Majority |
+| Payments | Majority |
+| Shopping Cart | QUORUM |
+| Product Catalog | ONE |
+| Logging | ONE |
+| Analytics | ONE |
+| Notifications | ONE |
+| Search | ONE or QUORUM |
+
+Always start from the business requirement.
+
+---
+
+# Principal Engineer Insight
+
+> [!IMPORTANT]
+> Quorum is not a database feature.
+>
+> It is a distributed systems pattern.
+>
+> Cassandra, MongoDB, Kafka, Spanner and CockroachDB all apply the same underlying principle:
+>
+> Ensure enough replicas acknowledge an operation so future operations can safely observe it.
+
+---
+
+# Interview Conversation
+
+**Interviewer**
+
+Why doesn't Cassandra simply use ALL for every request?
+
+---
+
+**Weak Answer**
+
+Because it's slower.
+
+---
+
+**Principal Engineer Answer**
+
+Using ALL maximizes consistency but significantly reduces availability. If any replica is unavailable or slow, the request fails or experiences higher latency. QUORUM provides a better balance because it guarantees quorum intersection while allowing some replicas to be temporarily unavailable.
+
+---
+
+# Common Interview Mistakes
+
+> [!WARNING]
+> Thinking QUORUM always means every replica.
+
+---
+
+> [!WARNING]
+> Assuming Kafka ISR is identical to Cassandra quorum.
+
+The goals are similar, but Kafka defines durability using the current In-Sync Replica set rather than configurable read/write quorums.
+
+---
+
+> [!WARNING]
+> Assuming DynamoDB exposes quorum settings directly.
+
+AWS intentionally abstracts these implementation details.
+
+---
+
+# Key Takeaways
+
+- Cassandra exposes multiple consistency levels.
+- QUORUM is the most commonly used balance between consistency and availability.
+- MongoDB uses Majority Write Concern.
+- Kafka uses ISR acknowledgements.
+- Different databases expose different APIs while applying the same quorum principles.
+- Business requirements should determine the chosen consistency level.

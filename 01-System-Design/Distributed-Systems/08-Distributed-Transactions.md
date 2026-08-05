@@ -235,25 +235,23 @@ This creates a **distributed transaction consistency problem**:
 
 # Why Distributed Transactions Exist
 
-Distributed transactions attempt
+Distributed transactions exist to maintain **business consistency across multiple independent services and databases**.
 
-to preserve
+The goal is **not simply to maintain database consistency**.
 
-business consistency
+The real goal is to ensure **business correctness** across the entire workflow.
 
-across
+### In Simple Terms
 
-multiple independent systems.
+**Database consistency**
+→ Is each individual database in a valid state?
 
-The goal is
+**Business consistency**
+→ Is the overall business operation in the correct state across all services?
 
-not
+> **The goal of distributed transactions is not database consistency.
+> The goal is business correctness.**
 
-database consistency.
-
-The goal is
-
-business correctness.
 
 ---
 
@@ -297,65 +295,56 @@ Order Cancelled
 
 # Atomicity Problem
 
-Question
+# Can Multiple Services Commit at Exactly the Same Time?
 
-Can
+### Question
 
-five different services
+Can **five different microservices** commit their transactions **at exactly the same moment**?
 
-commit
+### Answer
 
-at exactly
+**Very difficult.**
 
-the same moment?
+In a distributed system, each service may have its own database and transaction manager. Coordinating a single atomic commit across all of them is extremely challenging.
 
-Very difficult.
+Several factors can interfere with coordination:
 
-Network delays
+* **Network delays** — messages may arrive late.
+* **Service crashes** — a service may fail during the transaction.
+* **Timeouts** — responses may not arrive within the expected time.
+* **Retries** — the same operation may be executed more than once.
+* **Network partitions** — services may temporarily lose communication with each other.
 
-crashes
+Therefore, achieving a **single atomic commit across multiple independent services** is fundamentally difficult.
 
-timeouts
+> **Distributed systems cannot assume that multiple services will commit at exactly the same time.**
 
-retries
-
-partitions
-
-all complicate
-
-coordination.
 
 ---
 
-# Why Not One Database?
+# Why Not Use One Shared Database?
 
-Interviewers often ask
+Interviewers often ask:
 
-```
-Why not
+> **"Why not put everything into one database?"**
 
-put everything
+### Answer
 
-into
+Microservices intentionally **avoid a shared database** because each service should own its data and evolve independently.
 
-one database?
-```
+A shared database creates tight coupling, whereas separate databases provide several important benefits:
 
-Answer
+* **Independent scaling** – Each service can scale its database based on its own workload.
+* **Independent deployments** – Services can be updated or released without affecting others.
+* **Team autonomy** – Different teams can develop, test, and maintain their services independently.
+* **Technology flexibility** – Each service can choose the database that best fits its requirements (PostgreSQL, MySQL, MongoDB, Redis, etc.).
+* **Failure isolation** – Problems in one database are less likely to impact other services.
 
-Because
+### The Trade-off
 
-- Independent scaling
-- Independent deployments
-- Team autonomy
-- Different storage technologies
-- Failure isolation
+While separate databases improve scalability and maintainability, they also make **distributed transactions** much more challenging because there is **no single ACID transaction spanning all services**.
 
-Microservices intentionally
-
-avoid
-
-shared databases.
+> **Microservices trade the simplicity of a shared database for scalability, autonomy, flexibility, and resilience.**
 
 ---
 
@@ -397,29 +386,34 @@ another service's database.
 
 ---
 
-# What Makes This Hard?
+# What Makes Distributed Transactions Hard?
 
-Suppose
+Suppose an order involves multiple services:
 
-Payment succeeds.
+1. **Payment Service** processes the payment successfully.
+2. Immediately afterward, **Inventory Service crashes**.
+3. The overall business operation can no longer be completed.
 
-Immediately afterwards
+### Question
 
-Inventory crashes.
+**Who tells the Payment Service to undo the charge?**
 
-Question
+The Inventory Service cannot do it because it has crashed, and the Payment Service has already committed its transaction.
 
-Who tells
+### The Real Problem
 
-Payment
+This requires **coordination between independent services**.
 
-to undo
+The system must determine:
 
-the charge?
+* What happened?
+* Which operations already succeeded?
+* Which operations failed?
+* Should the successful operations be undone?
+* How do we safely retry or compensate for them?
 
-This requires
+> **This coordination problem is at the heart of distributed transactions in microservices.**
 
-coordination.
 
 ---
 

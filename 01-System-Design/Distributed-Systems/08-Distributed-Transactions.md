@@ -866,6 +866,47 @@ This blocking behavior is not an implementation bug.
 
 It is a property of the protocol.
 
+# Why 2PC Is Blocking
+
+After voting **YES**, a participant enters the **prepared** state.
+
+At this point, the participant:
+
+- Has durably promised that it can commit.
+- Must retain the locks and resources needed to honor that promise.
+- Cannot unilaterally abort because the coordinator may have decided **COMMIT**.
+- Cannot unilaterally commit because the coordinator may have decided **ABORT**.
+
+## Coordinator Failure
+
+If the coordinator fails before a participant learns the final decision, the participant cannot safely proceed.
+
+A timeout does not resolve the uncertainty. It only indicates that no response arrived. The coordinator may have:
+
+- Crashed.
+- Become slow.
+- Become unreachable because of a network partition.
+
+The timeout does not reveal whether the transaction was committed or aborted.
+
+## Operational Impact
+
+While participants remain prepared:
+
+- Database locks remain held.
+- Applications wait.
+- Conflicting transactions block.
+- System throughput decreases.
+- Availability may degrade.
+
+Participants remain blocked until the coordinator recovers or they obtain the durable decision from another authoritative source.
+
+## Key Takeaway
+
+> The blocking behavior of Two-Phase Commit is not an implementation bug. It is a property of the protocol.
+
+2PC prioritizes atomicity: every participant must reach the same outcome. When the final decision is unknown, blocking is the only safe action.
+
 ---
 
 # Interview Question
@@ -877,6 +918,31 @@ Because another participant may already have committed.
 Unilateral rollback could violate atomicity.
 
 Once a participant votes YES, it has transferred decision authority to the coordinator.
+
+
+Because a timeout does not reveal the coordinator's final decision.
+
+Consider this sequence:
+
+1. Every participant votes **YES**.
+2. The coordinator durably records **COMMIT**.
+3. The coordinator sends the decision to some participants.
+4. Before all participants receive it, the coordinator crashes or becomes unreachable.
+5. A remaining participant times out.
+
+If that participant rolls back, the system may become inconsistent:
+
+- Some participants have committed.
+- The timed-out participant has rolled back.
+- The transaction is no longer atomic.
+
+The same uncertainty exists in the other direction. A participant cannot safely commit after a timeout because the coordinator may have decided **ABORT**.
+
+Therefore, a prepared participant must wait until it learns the authoritative decision.
+
+> A timeout indicates uncertainty, not an abort decision.
+
+Allowing participants to roll back independently would make 2PC non-blocking only by sacrificing its atomicity guarantee.
 
 ---
 
@@ -902,17 +968,27 @@ A common Principal follow-up is:
 
 No.
 
-A timeout cannot distinguish between:
-
+A timeout cannot distinguish between a coordinator that is:
 - crashed coordinator
 - slow coordinator
-- partitioned coordinator
+- Unreachable because of a network partition
 
 This is a direct consequence of the FLP impossibility result.
 
 In an asynchronous network,
 
 waiting longer never proves a node has failed.
+
+
+From a participant's perspective, these scenarios are indistinguishable: no response arrives before the timeout expires.
+
+This uncertainty is related to the **FLP impossibility result**. In a fully asynchronous network, there is no known upper bound on message delivery or process execution time. Therefore, waiting longer can never prove that a node has failed.
+
+A timeout provides a **suspicion of failure**, not proof of failure.
+
+Timeouts can trigger recovery actions, such as electing a new coordinator, but the protocol must remain safe when that suspicion is wrong.
+
+> Timeouts may improve liveness under additional timing assumptions, but they cannot eliminate uncertainty in a fully asynchronous system.
 
 ---
 
@@ -936,6 +1012,79 @@ The XA interface standardizes:
 - recovery
 
 Understanding XA is useful, but modern internet-scale systems rarely expose it directly to application developers.
+
+XA is a standard for coordinating a distributed transaction across multiple transactional resource managers, such as:
+
+- Relational databases
+- Message brokers
+- Transactional storage systems
+
+XA is defined by the **X/Open XA specification** and is commonly implemented using **Two-Phase Commit (2PC)**.
+
+## Main Components
+
+### Transaction Manager
+
+The transaction manager acts as the 2PC coordinator. It:
+
+- Assigns a global transaction identifier.
+- Tracks participating resources.
+- Starts the prepare phase.
+- Records the final decision durably.
+- Instructs participants to commit or roll back.
+- Performs recovery after failures.
+
+### Resource Managers
+
+Resource managers are the participants, such as databases or message brokers.
+
+Each resource manager must support the XA protocol and maintain durable transaction state.
+
+## How an XA Transaction Works
+
+### Phase 1: Prepare
+
+1. The application performs operations against multiple resources.
+2. The transaction manager asks each resource manager to prepare.
+3. Each resource manager durably records its changes.
+4. Each participant votes **YES** or **NO**.
+
+A **YES** vote means:
+
+> I have durably prepared the transaction and promise that I can commit later.
+
+### Phase 2: Commit or Roll Back
+
+If every participant votes **YES**:
+
+1. The transaction manager durably records **COMMIT**.
+2. It instructs every participant to commit.
+3. Each participant commits and releases its resources.
+
+If any participant votes **NO**:
+
+1. The transaction manager durably records **ROLLBACK**.
+2. It instructs every participant to roll back.
+3. Each participant discards its changes and releases its resources.
+
+## Example
+
+Suppose an application must perform two operations:
+
+- Debit money from a database.
+- Publish a message to a transactional message broker.
+
+Using XA, both resources participate in one global transaction:
+
+```text
+Application
+    |
+    v
+Transaction Manager
+    |
+    +-- Database
+    |
+    +-- Message Broker
 
 ---
 

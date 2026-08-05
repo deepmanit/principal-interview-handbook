@@ -1148,38 +1148,212 @@ A single NO aborts the transaction.
 
 ---
 
-# Interview Questions
+# Two-Phase Commit and Raft: Principal-Level Questions
 
-### Q1
+## Q1: Why Is the `PREPARE` Record Required to Be Durable?
 
-Why is the PREPARE record required to be durable?
+When a participant votes **YES**, it makes a promise:
+
+> I can commit this transaction later, even if I crash and restart.
+
+To honor that promise, the participant must persist the transaction's prepared state before sending its vote.
+
+The durable `PREPARE` record typically preserves enough information to:
+
+- Identify the global transaction.
+- Reconstruct the pending changes.
+- Retain or restore the transaction's commit capability.
+- Complete the transaction after recovery.
+- Prevent the transaction from being treated as locally aborted.
+
+Without a durable `PREPARE` record, this failure sequence is possible:
+
+1. The participant votes **YES**.
+2. The coordinator receives unanimous **YES** votes.
+3. The coordinator durably decides **COMMIT**.
+4. The participant crashes before receiving the decision.
+5. The participant restarts and forgets the transaction.
+6. The coordinator sends **COMMIT** again.
+7. The participant cannot honor its earlier promise.
+
+The coordinator may already have instructed other participants to commit. If the recovered participant cannot also commit, atomicity is violated.
+
+Therefore, the required ordering is:
+
+1. Persist the prepared state.
+2. Force the record to durable storage.
+3. Send the **YES** vote.
+
+> A participant must not vote **YES** until it can survive a crash and still commit.
 
 ---
 
-### Q2
+## Q2: Why Is 2PC Considered a Blocking Protocol?
 
-Why is 2PC considered a blocking protocol?
+2PC is blocking because a prepared participant may be unable to determine the final outcome without the coordinator.
+
+After voting **YES**, the participant knows:
+
+- It voted **YES**.
+- Other participants may have voted **YES** or **NO**.
+- The coordinator may have decided **COMMIT** or **ABORT**.
+- Some participants may already have received the final decision.
+
+If the coordinator becomes unavailable, the participant cannot safely choose either outcome.
+
+It cannot safely commit because:
+
+- Another participant may have voted **NO**.
+- The coordinator may have decided **ABORT**.
+
+It cannot safely roll back because:
+
+- Every participant may have voted **YES**.
+- The coordinator may have durably decided **COMMIT**.
+- Other participants may already have committed.
+
+While the decision remains unknown, prepared participants may retain:
+
+- Database locks
+- Reserved resources
+- Transaction log entries
+- Uncommitted changes
+
+Conflicting work may then block until the coordinator recovers or the authoritative decision is discovered.
+
+> 2PC is blocking because some failures can leave participants unable to determine the only safe outcome independently.
+
+This is a protocol property, not merely an implementation defect.
 
 ---
 
-### Q3
+## Q3: Why Can't a Participant Roll Back After Voting **YES**?
 
-Why can't a participant rollback after voting YES?
+A **YES** vote is an irrevocable promise during normal protocol execution:
+
+> I have prepared durably and will follow the coordinator's final decision.
+
+Consider this sequence:
+
+1. Every participant votes **YES**.
+2. The coordinator durably records **COMMIT**.
+3. The coordinator sends **COMMIT** to participant A.
+4. Participant A commits.
+5. The coordinator becomes unreachable before notifying participant B.
+6. Participant B times out and rolls back.
+
+The resulting state is inconsistent:
+
+- Participant A committed.
+- Participant B rolled back.
+- Atomicity was violated.
+
+A timeout does not make rollback safe. It cannot reveal whether the coordinator:
+
+- Crashed before deciding.
+- Decided **ABORT**.
+- Decided **COMMIT**.
+- Sent **COMMIT** to some participants.
+- Is only slow or partitioned.
+
+Before voting **YES**, a participant may vote **NO** and roll back locally.
+
+After voting **YES**, it must remain prepared until it learns the authoritative outcome.
+
+> Allowing rollback after a **YES** vote would avoid blocking by sacrificing atomicity.
+
+Administrative heuristic rollback is possible in some XA systems, but it is explicitly dangerous. It can create a heuristic mixed outcome in which different resources reach different final states.
 
 ---
 
-### Q4
+## Q4: Why Does 2PC Require Unanimous Agreement While Raft Requires Only a Majority?
 
-Why does 2PC require unanimous agreement while Raft requires only a majority?
+They solve different problems over different kinds of nodes.
+
+### 2PC Participants Hold Different Pieces of the Transaction
+
+In 2PC, participants are distinct transactional resources.
+
+For example:
+
+- A bank database debits an account.
+- An inventory database reserves an item.
+- A message broker publishes an event.
+
+The transaction is allowed to commit only if every required participant can commit its part.
+
+If one participant votes **NO**, committing the others would produce a partial transaction.
+
+Therefore:
+
+> 2PC requires unanimous **YES** votes from all required participants to commit.
+
+A missing participant cannot generally be ignored because it holds a unique part of the transaction.
+
+### Raft Nodes Hold Replicas of the Same State
+
+In Raft, nodes are replicas of one logical state machine.
+
+A majority is sufficient because:
+
+- Any two majorities overlap.
+- The overlapping replica preserves knowledge of previously committed log entries.
+- A minority can be unavailable without losing the committed state.
+- The leader can be replaced using the surviving majority.
+
+For a cluster of five replicas, three replicas can commit an entry while two are unavailable because the three represent a quorum of the same replicated system.
+
+### The Core Difference
+
+| Protocol | Nodes represent | Agreement required | Reason |
+|---|---|---:|---|
+| 2PC | Different transaction participants | All required participants | Each participant owns a unique part of the transaction |
+| Raft | Replicas of one logical state machine | Majority of replicas | Quorum intersection preserves committed history |
+
+A 2PC participant is not interchangeable with another participant.
+
+A Raft replica generally is.
+
+> Unanimity in 2PC is about completing every required effect. A majority in Raft is about choosing one durable history among replicas of the same effect.
 
 ---
 
-### Q5
+## Q5: Can Raft Replace 2PC?
 
-Can Raft replace 2PC?
+Not directly.
 
-If not, why not?
+Raft solves **consensus among replicas**. It allows replicas of one logical service to agree on:
 
+- A leader
+- An ordered log
+- A replicated state
+- A durable decision
+
+2PC solves **atomic commit across distinct transactional resources**. It ensures that:
+
+- Every participant commits, or
+- Every participant rolls back
+
+These are related but different problems.
+
+### What Raft Can Replace
+
+Raft can replace a single, non-replicated coordinator with a replicated coordinator.
+
+Instead of storing the transaction decision on one coordinator machine, a Raft cluster can durably replicate it:
+
+```text
+                     Replicated Coordinator
+                  +---------+---------+---------+
+                  | Raft 1  | Raft 2  | Raft 3  |
+                  +---------+---------+---------+
+                              |
+                    Atomic commit protocol
+                              |
+             +----------------+----------------+
+             |                                 |
+        Database A                        Database B
+```
 ---
 
 # Key Takeaways

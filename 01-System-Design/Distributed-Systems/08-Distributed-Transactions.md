@@ -1076,7 +1076,7 @@ Suppose an application must perform two operations:
 
 Using XA, both resources participate in one global transaction:
 
-```text
+
 Application
     |
     v

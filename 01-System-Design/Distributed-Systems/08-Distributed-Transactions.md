@@ -145,49 +145,45 @@ Database guarantees consistency.
 
 # Why Doesn't This Work?
 
-Suppose Order Service uses PostgreSQL.
+Suppose we have the following microservices, each using its own database:
 
-Payment Service uses MySQL.
+* **Order Service** → PostgreSQL
+* **Payment Service** → MySQL
+* **Inventory Service** → MongoDB
+* **Shipping Service** → Redis
 
-Inventory Service uses MongoDB.
+### Question
 
-Shipping Service uses Redis.
+If a distributed transaction fails, **who is responsible for performing the rollback?**
 
-Question
+### Answer
 
-Who performs
+**Nobody performs a global rollback.**
 
-the rollback?
+Each microservice **owns and manages its own database**. Therefore, one service cannot directly roll back changes made by another service.
 
-Nobody.
+This is why traditional database transactions such as `ACID` transactions cannot span all these services. Instead, distributed systems typically use patterns such as **Saga**, where each service performs a **compensating transaction** to undo or compensate for its own completed operation.
 
-Each service
-
-owns
-
-its own database.
 
 ---
 
 # ACID Boundary
 
-One database
+# ACID Transaction Boundary
 
+**Single Database**
 ↓
+**Single Transaction**
 
-One Transaction
-
-Multiple databases
-
+**Multiple Databases**
 ↓
+**No Shared Transaction Manager**
+↓
+**No Single ACID Transaction Across Services**
 
-No shared transaction manager
+This is one of the **fundamental challenges of distributed transactions in microservices**.
 
-This is
-
-the fundamental challenge
-
-of microservices.
+Each microservice owns its own database and transaction boundary. Therefore, a single business operation that spans multiple services cannot usually be handled by one traditional ACID transaction.
 
 ---
 
@@ -213,21 +209,27 @@ Inventory Failure
 Shipping Never Starts
 ```
 
-Question
+# Business vs. Technical Reality
 
-Should customer
+### Question
 
-be charged?
+**Should the customer be charged?**
 
-Business answer
+### Business Answer
 
-No.
+**No.**
 
-Technical problem
+The order cannot be completed, so the customer should not be charged.
 
-Payment
+### Technical Problem
 
-already succeeded.
+**The payment has already succeeded.**
+
+The Payment Service has already committed the transaction, but a subsequent step failed.
+
+This creates a **distributed transaction consistency problem**:
+
+> The business expects the entire operation to fail, but one microservice has already successfully committed its part.
 
 ---
 

@@ -145,31 +145,13 @@ Database guarantees consistency.
 
 # Why Doesn't This Work?
 
-Suppose
+Suppose Order Service uses PostgreSQL.
 
-Order Service
+Payment Service uses MySQL.
 
-uses
+Inventory Service uses MongoDB.
 
-PostgreSQL.
-
-Payment Service
-
-uses
-
-MySQL.
-
-Inventory Service
-
-uses
-
-MongoDB.
-
-Shipping Service
-
-uses
-
-Redis.
+Shipping Service uses Redis.
 
 Question
 
